@@ -7,6 +7,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+__all__ = ('Tinkoff', 'TinkoffError',)
+
+
 PAYMENT_STATUS_MAPPING = {
     'NEW': 'Платеж зарегистрирован в шлюзе, но его обработка в процессинге не начата',
     'CHECKING': 'Платеж на этапе проверки данных',

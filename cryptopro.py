@@ -5,6 +5,9 @@ import base64
 import re
 
 
+__all__ = ('CryptoPro', 'CryptoProError',)
+
+
 class CryptoProError(Exception):
     code = None
     def __init__(self, message, code=-1):
