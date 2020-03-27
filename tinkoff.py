@@ -1,13 +1,9 @@
 import requests
-from requests.exceptions import HTTPError
 
 from .cryptopro import CryptoPro, CryptoProError
 
 import logging
 logger = logging.getLogger(__name__)
-
-
-__all__ = ('Tinkoff', 'TinkoffError',)
 
 
 PAYMENT_STATUS_MAPPING = {
@@ -20,21 +16,12 @@ PAYMENT_STATUS_MAPPING = {
     'PROCESSING': 'На стадии обработки',
     'UNKNOWN': 'Статус не определен',
 }
-PAYMENT_STATUS_CONVERTS = {
-    'NEW': 2,
-    'CHECKING': 2,
-    'CHECKED': 2,
-    'COMPLETING': 2,
-    'COMPLETED': 0,
-    'REJECTED': 1,
-    'PROCESSING': 2,
-    'UNKNOWN': 2,
-}
 CARD_CHECK_TYPES = (
-    ('NO', 'Сохранить карту без проверок',),
+    ('NO', 'Сохранить карту без проверок'),
     ('HOLD', 'При сохранении сделать списание, а затем отмену на 1 руб.'),
     ('3DS', 'При сохранении карты выполнить проверку 3DS и выполнить списание, а затем отмену на 1 руб.'),
-    ('3DSHOLD', 'При привязке выполняем проверку, поддерживает карта 3DS или нет. Если да, выполняем списание, а затем отмену на 1 руб. Если нет, то аналогично на сумму от 100 до 199 коп.'),
+    ('3DSHOLD', 'При привязке выполняем проверку, поддерживает карта 3DS или нет. \
+      Если да, выполняем списание, а затем отмену на 1 руб. Если нет, то аналогично на сумму от 100 до 199 коп.'),
 )
 CARD_STATUS_MAPPING = {
     'A': 'Активная',
@@ -55,7 +42,7 @@ class TinkoffError(Exception):
         self.code = code
 
     def __str__(self):
-        return '%d: %s' % (self.code, super().__str__(),)
+        return '%d: %s' % (self.code, super().__str__())
 
 
 class Tinkoff():
@@ -89,12 +76,12 @@ class Tinkoff():
     test_url = 'https://rest-api-test.tinkoff.ru/e2c/'
     prod_url = 'https://securepay.tinkoff.ru/e2c/'
 
-    def __init__(self, terminal_key, is_test=False, cryptopro={}):
+    def __init__(self, terminal_key, cryptopro, is_test=False):
         assert terminal_key, 'Terminal key must be defined'
 
         self.terminal_key = terminal_key
-        self.is_test = is_test
         self.cryptopro = cryptopro
+        self.is_test = is_test
 
     def create_payment(self, order_id, card_id, amount, client_id=None, data=None):
         # There is a signature error if client_id is passed
@@ -235,18 +222,19 @@ class Tinkoff():
         return int(value * 100)
 
     def _join_data(self, data):
-        return '|'.join([ '%s=%s' % (x, data[x],) for x in data ])
+        return '|'.join([ '%s=%s' % (x, data[x]) for x in data ])
 
     def _request(self, method, url, **kwargs):
-        if 'data' in kwargs:
-            kwargs['data'].update({ 'TerminalKey': self.terminal_key, })
-            kwargs['data'].update(self._get_sign(kwargs['data']))
+        if 'data' not in kwargs:
+            kwargs['data'] = {}
         if 'headers' not in kwargs:
             kwargs['headers'] = {}
-        kwargs['headers'].update({ 'Content-Type': 'application/x-www-form-urlencoded', })
+        kwargs['data'].update({'TerminalKey': self.terminal_key})
+        kwargs['data'].update(self._get_sign(kwargs['data']))
+        kwargs['headers'].update({'Content-Type': 'application/x-www-form-urlencoded'})
         url = self.url + url
 
-        logger.debug('Request %s to URL %s with args: %s' % (method, url, str(kwargs),))
+        logger.debug('Request %s to URL %s with args: %s' % (method, url, str(kwargs)))
 
         response = requests.request(method, url, **kwargs)
         try:
@@ -261,7 +249,7 @@ class Tinkoff():
         if isinstance(result, dict):
             if not result['Success']:
                 logger.warning('Failed with result: %s' % (str(result),))
-                message = ' '.join([ x for x in [ result.get('Details'), result.get('Message'), ] if x ])
+                message = ' '.join([ x for x in [ result.get('Details'), result.get('Message') ] if x ])
                 code = int(result.get('ErrorCode', -1))
                 raise TinkoffError(message, code)
         elif isinstance(result, list):
@@ -289,7 +277,6 @@ class Tinkoff():
             raise e
 
         logger.debug('Hash: %s' % (digest_b64,))
-
 
         try:
             sign = self.cp.get_sign(digest)
@@ -323,3 +310,6 @@ class Tinkoff():
         if not hasattr(self, '__cp'):
             setattr(self, '__cp', CryptoPro(**self.cryptopro))
         return getattr(self, '__cp')
+
+
+__all__ = ('Tinkoff', 'TinkoffError')
