@@ -1,6 +1,6 @@
 import requests
 
-from .cryptopro import CryptoPro, CryptoProError
+from cryptopro import CryptoPro, CryptoProError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ CARD_TYPE_MAPPING = {
 
 
 class TinkoffError(Exception):
-    def __init__(self, message, code=-1):
+    def __init__(self, message, code='-1'):
         super().__init__(message)
         self.code = code
 
@@ -225,24 +225,34 @@ class Tinkoff():
         return '|'.join([ '%s=%s' % (x, data[x]) for x in data ])
 
     def _request(self, method, url, **kwargs):
-        if 'data' not in kwargs:
-            kwargs['data'] = {}
-        if 'headers' not in kwargs:
-            kwargs['headers'] = {}
-        kwargs['data'].update({'TerminalKey': self.terminal_key})
-        kwargs['data'].update(self._get_sign(kwargs['data']))
-        kwargs['headers'].update({'Content-Type': 'application/x-www-form-urlencoded'})
-        url = self.url + url
+        method, url, params = self._prepare_request(method, url, **kwargs)
 
         logger.debug('Request %s to URL %s with args: %s' % (method, url, str(kwargs)))
+        response = self._proceed_request(method, url, **params)
 
-        response = requests.request(method, url, **kwargs)
         try:
             response.raise_for_status()
         except Exception as e:
             logger.exception('Failed with status %d' % (response.status_code,))
             raise e
 
+        return self._prepare_response(response)
+
+    def _prepare_request(self, method, url, **kwargs):
+        kwargs.setdefault('data', {})
+        kwargs.setdefault('headers', {})
+
+        kwargs['data'].update({'TerminalKey': self.terminal_key})
+        kwargs['data'].update(self._get_sign(kwargs['data']))
+        kwargs['headers'].update({'Content-Type': 'application/x-www-form-urlencoded'})
+        url = self.url + url
+
+        return method, url, kwargs
+
+    def _proceed_request(self, method, url, **kwargs):
+        return requests.request(method, url, **kwargs)
+
+    def _prepare_response(self, response):
         result = response.json()
         logger.debug('Got response: %s' % (str(result),))
 
@@ -250,7 +260,7 @@ class Tinkoff():
             if not result['Success']:
                 logger.warning('Failed with result: %s' % (str(result),))
                 message = ' '.join([ x for x in [ result.get('Details'), result.get('Message') ] if x ])
-                code = int(result.get('ErrorCode', -1))
+                code = result.get('ErrorCode', '-1')
                 raise TinkoffError(message, code)
         elif isinstance(result, list):
             result = {
