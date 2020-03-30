@@ -234,7 +234,12 @@ class CryptoPro():
                     # Field: NAME : VALUE
                     key = match.group(1)
                     value = match.group(2)
-                    item[key] = value
+                    if key not in item:
+                        item[key] = value
+                    elif isinstance(item[key], list):
+                        item[key].append(value)
+                    else:
+                        item[key] = [ item[key], value, ]
                 elif key:
                     match = re.search(r'^\s{3,}(.*?)\s*$', line)
                     if match:
@@ -243,7 +248,7 @@ class CryptoPro():
                         if isinstance(item[key], list):
                             item[key].append(value)
                         else:
-                            item[key] = [ item[key], value, ]
+                            item[key] = [item[key], value]
 
         return items
 

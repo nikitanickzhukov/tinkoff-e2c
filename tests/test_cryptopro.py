@@ -54,6 +54,61 @@ class CryptoProTestCase(TestCase):
             self.assertEqual(items[0]['id'], 'HDIMAGE\\\\xx-xxxxf.000\\XXXX')
             self.assertEqual(items[0]['name'], '\\\\.\\HDIMAGE\\xx-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 
+    def test_get_certificates(self):
+        result_out = '=============================================================================\n' + \
+                     '1-------\n' + \
+                     'Issuer              : E=cpca@cryptopro.ru\n' + \
+                     'Subject             : E=test@test.ru\n' + \
+                     'Serial              : 0x0000000000000000000000000000000000\n' + \
+                     'Container           : HDIMAGE\\\\xx-xxxxf.000\\XXXX\n' + \
+                     'CDP                 : http://cdp.cryptopro.ru/cdp/0000.crl\n' + \
+                     'CDP                 : http://cpca20.cryptopro.ru/cdp/0000.crl\n' + \
+                     'Extended Key Usage  : 1.3.6.1.5.5.7.3.2\n' + \
+                     '                      1.3.6.1.5.5.7.3.4\n' + \
+                     '=============================================================================\n' + \
+                     '2-------\n' + \
+                     'Issuer              : E=cpca@cryptopro.ru\n' + \
+                     'Subject             : E=test@test.ru\n' + \
+                     'Serial              : 0x1111111111111111111111111111111111\n' + \
+                     'Container           : HDIMAGE\\\\yy-yyyyf.000\\YYYY\n' + \
+                     'Extended Key Usage  : 1.3.6.1.5.5.7.3.2\n' + \
+                     '=============================================================================\n' + \
+                     '[ErrorCode: 0x00000000]\n'
+
+        response = self._get_mock_response(result_out.encode(self.cryptopro.encoding))
+        with patch('cryptopro.CryptoPro._proceed_command', return_value=response):
+            items = self.cryptopro.get_certificates()
+            self.assertEqual(len(items), 2)
+            self.assertEqual(items[0]['Serial'], '0x0000000000000000000000000000000000')
+            self.assertEqual(items[0]['Container'], 'HDIMAGE\\\\xx-xxxxf.000\\XXXX')
+            self.assertEqual(items[0]['CDP'], ['http://cdp.cryptopro.ru/cdp/0000.crl', 'http://cpca20.cryptopro.ru/cdp/0000.crl'])
+            self.assertEqual(items[0]['Extended Key Usage'], ['1.3.6.1.5.5.7.3.2', '1.3.6.1.5.5.7.3.4'])
+
+    def test_get_certificate_serial(self):
+        containers = [
+            {
+                'id': 'HDIMAGE\\\\xx-xxxxf.000\\XXXX',
+                'name': '\\\\.\\HDIMAGE\\xx-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+            }, {
+                'id': 'HDIMAGE\\\\yy-yyyyf.000\\YYYY',
+                'name': '\\\\.\\HDIMAGE\\yy-yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
+            }
+        ]
+        certificates = [
+            {
+                'Serial': '0x0000000000000000000000000000000000',
+                'Container': 'HDIMAGE\\\\xx-xxxxf.000\\XXXX',
+            }, {
+                'Serial': '0x1111111111111111111111111111111111',
+                'Container': 'HDIMAGE\\\\yy-yyyyf.000\\YYYY',
+            }
+        ]
+
+        with patch('cryptopro.CryptoPro.get_containers', return_value=containers):
+            with patch('cryptopro.CryptoPro.get_certificates', return_value=certificates):
+                serial = self.cryptopro.get_certificate_serial()
+                self.assertEqual(serial, certificates[0]['Serial'].replace('0x', '').lower())
+
     def test_crypto_error(self):
         tempfile = '/tmp/cryptopro.unittest'
         test_source = b'test source'
