@@ -95,15 +95,12 @@ class CryptoPro():
             out_file=out_file_name
         )
 
-        os.remove(in_file_name)
+        self._flush_temp_file(in_file_name)
 
         if res.returncode:
             raise self._get_error(res)
 
-        out_file = open(out_file_name, mode='r+b')
-        result = out_file.read()
-        out_file.close()
-        os.remove(out_file.name)
+        result = self._flush_temp_file(out_file_name)
 
         return result
 
@@ -145,15 +142,12 @@ class CryptoPro():
             out_file=out_file_name
         )
 
-        os.remove(in_file_name)
+        self._flush_temp_file(in_file_name)
 
         if res.returncode:
             raise self._get_error(res)
 
-        out_file = open(out_file_name, mode='r+b')
-        result = out_file.read()
-        out_file.close()
-        os.remove(out_file.name)
+        result = self._flush_temp_file(out_file_name)
 
         return result
 
@@ -332,12 +326,28 @@ class CryptoPro():
 
         logger.debug('Executing %s with args: %s' % (command, params))
 
-        res = subprocess.run([command, *params], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res = self._proceed_command(command, *params)
 
         if res.returncode:
             logger.warning('Failed with code %d' % (res.returncode,))
 
         return res
+
+    def _proceed_command(self, command, *args):
+        """
+        Proceeds a command
+
+        Parameters
+        ----------
+        command[str]: a command to be executed
+        *args: a list of arguments
+
+        Returns
+        -------
+        subprocess.CompletedProcess: a result
+        """
+
+        return subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def _create_temp_file(self, content=None):
         """
@@ -363,6 +373,29 @@ class CryptoPro():
             file.write(content)
         file.close()
         return file.name
+
+    def _flush_temp_file(self, filename):
+        """
+        Reads a temporary file, removes it and returns a file content
+
+        Parameters
+        ----------
+        filename[str]: a file name
+
+        Returns
+        -------
+        bytes: file content
+
+        Raises
+        ------
+        OSError: when got OS filesystem error
+        """
+
+        file = open(filename, mode='r+b')
+        content = file.read()
+        file.close()
+        os.remove(file.name)
+        return content
 
     def _get_lines(self, output):
         """
