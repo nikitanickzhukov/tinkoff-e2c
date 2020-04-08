@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class CryptoProError(Exception):
-    code = None
     def __init__(self, message, code=-1):
-        super().__init__(message)
+        super().__init__(message, code)
+        self.message = message
         self.code = code
 
     def __str__(self):
-        return '%d: %s' % (self.code, super().__str__())
+        return '{}: {}'.format(self.code, self.message)
 
 
 class CryptoPro():
@@ -76,7 +76,7 @@ class CryptoPro():
         """
 
         for k in ('sign_algorithm', 'container_name', 'encryption_provider'):
-            assert getattr(self, k), '%s must be defined' % (k,)
+            assert getattr(self, k), '{} must be defined'.format(k)
 
         in_file_name = self._create_temp_file(content)
         out_file_name = in_file_name + '.hash'
@@ -123,7 +123,7 @@ class CryptoPro():
         """
 
         for k in ('sign_algorithm', 'container_name', 'encryption_provider'):
-            assert getattr(self, k), '%s must be defined' % (k,)
+            assert getattr(self, k), '{} must be defined'.format(k)
 
         in_file_name = self._create_temp_file(content)
         out_file_name = in_file_name + '.sign'
@@ -205,7 +205,7 @@ class CryptoPro():
         """
 
         for k in ('store_name',):
-            assert getattr(self, k), '%s must be defined' % (k,)
+            assert getattr(self, k), '{} must be defined'.format(k)
 
         result = self._execute(
             "certmgr",
@@ -329,12 +329,12 @@ class CryptoPro():
         command = self.prefix + command
         params = [ x % kwargs for x in args ]
 
-        logger.debug('Executing %s with args: %s' % (command, params))
+        logger.debug('Executing %s with args: %s', command, params)
 
         res = self._proceed_command(command, *params)
 
         if res.returncode:
-            logger.warning('Failed with code %d' % (res.returncode,))
+            logger.warning('Failed with code %d', res.returncode)
 
         return res
 
@@ -445,7 +445,8 @@ class CryptoPro():
         if code is None:
             return CryptoProError('\n'.join(lines))
         if text is None:
-            text = 'Error %d' % (code,)
+            text = 'Error {}'.format(code)
+
         return CryptoProError(text, code)
 
 
