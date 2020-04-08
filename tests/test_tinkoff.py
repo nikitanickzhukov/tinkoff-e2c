@@ -340,12 +340,13 @@ class TinkoffTestCase(TestCase):
             with self.assertRaises(HTTPError):
                 result = self.tinkoff.create_payment(**params)
 
-    def _get_mock_response(self, json, status_code=200, headers={}):
+    def _get_mock_response(self, json, status_code=200, headers=None):
         def raise_for_status():
             if status_code >= 400: raise HTTPError
         response = MagicMock()
         response.json = MagicMock(return_value=json)
         response.status_code = status_code
-        response.headers = headers
+        if headers:
+            response.headers = headers
         response.raise_for_status = MagicMock(side_effect=raise_for_status)
         return response
