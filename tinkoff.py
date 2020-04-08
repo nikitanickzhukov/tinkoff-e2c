@@ -38,11 +38,12 @@ CARD_TYPE_MAPPING = {
 
 class TinkoffError(Exception):
     def __init__(self, message, code='-1'):
-        super().__init__(message)
+        super().__init__(message, code)
+        self.message = message
         self.code = code
 
     def __str__(self):
-        return '%d: %s' % (self.code, super().__str__())
+        return '{}: {}'.format(self.code, self.message)
 
 
 class Tinkoff():
@@ -77,6 +78,14 @@ class Tinkoff():
     prod_url = 'https://securepay.tinkoff.ru/e2c/'
 
     def __init__(self, terminal_key, cryptopro, is_test=False):
+        """
+        Parameters
+        ----------
+        terminal_key[str]: the terminal key (got from bank)
+        cryptopro[dict]: cryptopro settings (see cryptopro.CryptoPro init parameters)
+        is_test[bool]: use test endpoint for requests
+        """
+
         assert terminal_key, 'Terminal key must be defined'
 
         self.terminal_key = terminal_key
@@ -84,7 +93,33 @@ class Tinkoff():
         self.is_test = is_test
 
     def create_payment(self, order_id, card_id, amount, client_id=None, data=None):
-        # There is a signature error if client_id is passed
+        """
+        Creates a payment
+
+        Parameters
+        ----------
+        order_id[str]: `OrderId` (in user's namespace)
+        card_id[int]: `CardId`
+        amount[int, float]: `Amount` (in basic units: roubles, USD, etc)
+        client_id[str]: `ClientId`
+        data[dict]: `DATA`
+
+        Returns
+        -------
+        dict: payment data:
+            - id[int] - `PaymentId`
+            - status[str] - `Status`
+            - status_name[str] - `Status` description
+            - url[str] - `PaymentURL` or `Location` header when got a 3xx status
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
+        # ERROR: There is a signature error if `client_id` is passed
 
         request = {
             'OrderId': order_id,
@@ -109,6 +144,27 @@ class Tinkoff():
         return result
 
     def proceed_payment(self, id):
+        """
+        Proceeds a payment
+
+        Parameters
+        ----------
+        id[int]: `PaymentId`
+
+        Returns
+        -------
+        dict: payment info:
+            - id[int] - `PaymentId`
+            - status[str] - `Status`
+            - status_name[str] - `Status` description
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'PaymentId': id,
         }
@@ -120,6 +176,27 @@ class Tinkoff():
         }
 
     def get_payment(self, id):
+        """
+        Returns a payment info
+
+        Parameters
+        ----------
+        id[int]: `PaymentId`
+
+        Returns
+        -------
+        dict: payment info:
+            - id[int] - `PaymentId`
+            - status[str] - `Status`
+            - status_name[str] - `Status` description
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'PaymentId': id,
         }
@@ -131,6 +208,27 @@ class Tinkoff():
         }
 
     def create_client(self, id, email=None, phone=None):
+        """
+        Creates a client
+
+        Parameters
+        ----------
+        id[str]: `CustomerKey`
+        email[str]: `Email`
+        phone[str]: `Phone`
+
+        Returns
+        -------
+        dict: client info:
+            - id[str] - `CustomerKey`
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'CustomerKey': id,
         }
@@ -144,6 +242,25 @@ class Tinkoff():
         }
 
     def delete_client(self, id):
+        """
+        Deletes a client
+
+        Parameters
+        ----------
+        id[str]: `CustomerKey`
+
+        Returns
+        -------
+        dict: client info:
+            - id[str] - `CustomerKey`
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'CustomerKey': id,
         }
@@ -153,6 +270,27 @@ class Tinkoff():
         }
 
     def get_client(self, id):
+        """
+        Returns a client info
+
+        Parameters
+        ----------
+        id[str]: `CustomerKey`
+
+        Returns
+        -------
+        dict: client info:
+            - id[str] - `CustomerKey`
+            - email[str] - `Email`
+            - phone[str] - `Phone`
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'CustomerKey': id,
         }
@@ -167,7 +305,30 @@ class Tinkoff():
         return result
 
     def create_card(self, client_id, check_type=None, comment=None, form_type=None):
-        # There is a signature error if comment and/or form_type are passed
+        """
+        Returns an URL to go for creating a card
+
+        Parameters
+        ----------
+        client_id[str]: `CustomerKey`
+        check_type[str] - `CheckType`
+        comment[str] - `Description`
+        form_type[str] - `PayForm`
+
+        Returns
+        -------
+        dict: request info:
+            - request_id[str] - `RequestKey`
+            - url[str] - `PaymentURL` or `Location` header when got a 3xx status
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
+        # ERROR: There is a signature error if comment and/or form_type are passed
 
         request = {
             'CustomerKey': client_id,
@@ -189,6 +350,28 @@ class Tinkoff():
         return result
 
     def delete_card(self, id, client_id):
+        """
+        Updates card status to `D` (deleted)
+
+        Parameters
+        ----------
+        id[int]: `CardId`
+        client_id[str]: `CustomerKey`
+
+        Returns
+        -------
+        dict: card info:
+            - id[int] - `CardId`
+            - status[str] - `Status`
+            - status_name[str] - `Status` description
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'CardId': id,
             'CustomerKey': client_id,
@@ -196,9 +379,38 @@ class Tinkoff():
         response = self._request('POST', 'RemoveCard', data=request)
         return {
             'id': response['CardId'],
+            'status': response['Status'],
+            'status_name': CARD_STATUS_MAPPING.get(response['Status']),
         }
 
     def get_cards(self, client_id):
+        """
+        Returns a list of client's cards
+
+        Parameters
+        ----------
+        client_id[str]: `CustomerKey`
+
+        Returns
+        -------
+        list[dict]: cards:
+            - id[int] - `CardId`
+            - status[str] - `Status`
+            - status_name[str] - `Status` description
+            - type[int] -  `CardType`,
+            - type_name[str] - `CardType` description
+            - pan[str] - `Pan` (masked)
+            - rebill_id[int] - `RebillID`
+            - expires[str] - `ExpDate`
+            - is_active[bool] - card has `A` (active) `Status`
+
+        Raises
+        ------
+        CryptoProError: when got an encryption error
+        HTTPError: when got a request error
+        TinkoffError: when got an error from the bank
+        """
+
         request = {
             'CustomerKey': client_id,
         }
@@ -216,6 +428,16 @@ class Tinkoff():
         } for x in response['items'] ]
 
     def get_card_check_types(self):
+        """
+        Returns a list of available options for card checking
+
+        Returns
+        -------
+        list[dict]: cards:
+            - code[str] - code name
+            - name[str] - description
+        """
+
         return [ { 'code': x[0], 'name': x[1] } for x in CARD_CHECK_TYPES ]
 
     def _process_amount(self, value):
@@ -254,11 +476,11 @@ class Tinkoff():
 
     def _prepare_response(self, response):
         result = response.json()
-        logger.debug('Got response: %s' % (str(result),))
+        logger.debug('Got response: %s', result)
 
         if isinstance(result, dict):
             if not result['Success']:
-                logger.warning('Failed with result: %s' % (str(result),))
+                logger.warning('Failed with result: %s', result)
                 message = ' '.join([ x for x in [ result.get('Details'), result.get('Message') ] if x ])
                 code = result.get('ErrorCode', '-1')
                 raise TinkoffError(message, code)
@@ -273,26 +495,26 @@ class Tinkoff():
         return result
 
     def _get_sign(self, data):
-        logger.debug('Sign data: %s' % (str(data),))
+        logger.debug('Sign data: %s', data)
 
         content = ''.join([ str(data[x]) for x in sorted(data.keys()) ])
 
-        logger.debug('Sign string: %s' % (content,))
+        logger.debug('Sign string: %s', content)
 
         try:
             digest = self.cp.get_hash(content)
             digest_b64 = self.cp.to_base64(digest)
         except CryptoProError as e:
-            logger.exception('Cannot generate digest: error %d' % (e.code,))
+            logger.exception('Cannot generate digest: error %d', e.code)
             raise e
 
-        logger.debug('Hash: %s' % (digest_b64,))
+        logger.debug('Hash: %s', digest_b64)
 
         try:
             sign = self.cp.get_sign(digest)
             sign_b64 = self.cp.to_base64(sign)
         except CryptoProError as e:
-            logger.exception('Cannot generate signature: error %d' % (e.code,))
+            logger.exception('Cannot generate signature: error %d', e.code)
             raise e
 
         logger.debug('Sign: %s' % (sign_b64,))
@@ -300,10 +522,10 @@ class Tinkoff():
         try:
             serial = self.cp.get_certificate_serial()
         except CryptoProError as e:
-            logger.exception('Cannot get certificate serial: error %d' % (e.code,))
+            logger.exception('Cannot get certificate serial: error %d', e.code)
             raise e
 
-        logger.debug('Serial: %s' % (serial,))
+        logger.debug('Serial: %s', serial)
 
         return {
             'DigestValue': digest_b64,
