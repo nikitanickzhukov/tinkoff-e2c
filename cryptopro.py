@@ -81,24 +81,22 @@ class CryptoPro():
         in_file_name = self._create_temp_file(content)
         out_file_name = in_file_name + '.hash'
 
-        res = self._execute(
-            "csptest",
-            "-keyset",
-            "-hash", "%(sign_algorithm)s",
-            "-silent",
-            "-cont", "%(container_name)s",
-            "-keytype", "exchange",
-            "-in", "%(in_file)s",
-            "-hashout", "%(out_file)s",
-            "-provtype", "%(encryption_provider)d",
-            in_file=in_file_name,
-            out_file=out_file_name
-        )
-
-        self._flush_temp_file(in_file_name)
-
-        if res.returncode:
-            raise self._get_error(res)
+        try:
+            self._execute(
+                "csptest",
+                "-keyset",
+                "-hash", "%(sign_algorithm)s",
+                "-silent",
+                "-cont", "%(container_name)s",
+                "-keytype", "exchange",
+                "-in", "%(in_file)s",
+                "-hashout", "%(out_file)s",
+                "-provtype", "%(encryption_provider)d",
+                in_file=in_file_name,
+                out_file=out_file_name
+            )
+        finally:
+            self._flush_temp_file(in_file_name)
 
         result = self._flush_temp_file(out_file_name)
 
@@ -128,24 +126,22 @@ class CryptoPro():
         in_file_name = self._create_temp_file(content)
         out_file_name = in_file_name + '.sign'
 
-        res = self._execute(
-            "csptest",
-            "-keyset",
-            "-sign", "%(sign_algorithm)s",
-            "-silent",
-            "-cont", "%(container_name)s",
-            "-keytype", "exchange",
-            "-in", "%(in_file)s",
-            "-out", "%(out_file)s",
-            "-provtype", "%(encryption_provider)d",
-            in_file=in_file_name,
-            out_file=out_file_name
-        )
-
-        self._flush_temp_file(in_file_name)
-
-        if res.returncode:
-            raise self._get_error(res)
+        try:
+            self._execute(
+                "csptest",
+                "-keyset",
+                "-sign", "%(sign_algorithm)s",
+                "-silent",
+                "-cont", "%(container_name)s",
+                "-keytype", "exchange",
+                "-in", "%(in_file)s",
+                "-out", "%(out_file)s",
+                "-provtype", "%(encryption_provider)d",
+                in_file=in_file_name,
+                out_file=out_file_name
+            )
+        finally:
+            self._flush_temp_file(in_file_name)
 
         result = self._flush_temp_file(out_file_name)
 
@@ -162,10 +158,9 @@ class CryptoPro():
         Raises
         ------
         CryptoProError: when got an encryption error
-        OSError: when got OS filesystem error
         """
 
-        result = self._execute(
+        output = self._execute(
             "csptest",
             "-keyset",
             "-enum_cont",
@@ -174,7 +169,7 @@ class CryptoPro():
             "-uniq"
         )
 
-        lines = self._get_lines(result.stdout)
+        lines = self._get_lines(output)
         items = []
 
         for line in lines:
@@ -207,13 +202,13 @@ class CryptoPro():
         for k in ('store_name',):
             assert getattr(self, k), '{} must be defined'.format(k)
 
-        result = self._execute(
+        output = self._execute(
             "certmgr",
             "-list",
             "-store", "%(store_name)s"
         )
 
-        lines = self._get_lines(result.stdout)
+        lines = self._get_lines(output)
         items = []
         item = None
         key = None
@@ -316,7 +311,7 @@ class CryptoPro():
 
         Returns
         -------
-        subprocess.CompletedProcess: a result
+        bytes: a console output
         """
 
         kwargs.update({
@@ -331,12 +326,13 @@ class CryptoPro():
 
         logger.debug('Executing %s with args: %s', command, params)
 
-        res = self._proceed_command(command, *params)
+        try:
+            output = self._proceed_command(command, *params)
+        except CryptoProError as e:
+            logger.exception('Failed with code %d', e.code)
+            raise e
 
-        if res.returncode:
-            logger.warning('Failed with code %d', res.returncode)
-
-        return res
+        return output
 
     def _proceed_command(self, command, *args):
         """
@@ -349,10 +345,17 @@ class CryptoPro():
 
         Returns
         -------
-        subprocess.CompletedProcess: a result
+        bytes: a console output
+
+        Raises
+        ------
+        CryptoProError: when got a non-zero result code
         """
 
-        return subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode:
+            raise self._get_error(result.stderr)
+        return result.stdout
 
     def _create_temp_file(self, content=None):
         """
@@ -417,20 +420,20 @@ class CryptoPro():
 
         return output.decode(self.encoding).split('\n')
 
-    def _get_error(self, result):
+    def _get_error(self, output):
         """
         Parses the cryptopro command output and tries to find an error number and description
 
         Parameters
         ----------
-        result[subprocess.CompletedProcess]: an execution result
+        output[bytes]: a console output
 
         Returns
         -------
         CryptoProError - an exception to raise
         """
 
-        lines = self._get_lines(result.stderr)
+        lines = self._get_lines(output)
 
         code = None
         text = None
