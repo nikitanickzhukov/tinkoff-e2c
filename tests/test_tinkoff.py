@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from requests.exceptions import HTTPError
 
 from tinkoff import Tinkoff, TinkoffError
@@ -9,6 +9,7 @@ from .test_cryptopro import CRYPTOPRO
 TINKOFF = {
     'terminal_key': 'test_key',
     'cryptopro': CRYPTOPRO,
+    'is_test': True,
 }
 SIGN_VALUE = {
     'DigestValue': 'base64digest',
@@ -17,6 +18,7 @@ SIGN_VALUE = {
 }
 
 
+@patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
 class TinkoffTestCase(TestCase):
     def setUp(self):
         self.tinkoff = Tinkoff(**TINKOFF)
@@ -24,7 +26,17 @@ class TinkoffTestCase(TestCase):
     def tearDown(self):
         del self.tinkoff
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
+    def test_real_request(self, sign_mock):
+        params = {
+            'order_id': '1',
+            'card_id': 1,
+            'amount': 1,
+            'data': {}
+        }
+        with self.assertRaises(TinkoffError) as e:
+            result = self.tinkoff.create_payment(**params)
+            self.assertEqual(e.code, '9999')
+
     def test_create_payment(self, sign_mock):
         params = {
             'order_id': '1',
@@ -47,18 +59,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.create_payment(**params)
             self.assertEqual(result['id'], success['PaymentId'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.create_payment(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_proceed_payment(self, sign_mock):
         params = {
             'id': '1',
@@ -78,18 +89,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.proceed_payment(**params)
             self.assertEqual(result['id'], success['PaymentId'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.proceed_payment(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_get_payment(self, sign_mock):
         params = {
             'id': '1',
@@ -110,19 +120,18 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.get_payment(**params)
             self.assertEqual(result['id'], success['PaymentId'])
             self.assertEqual(result['status'], success['Status'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.get_payment(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_create_client(self, sign_mock):
         params = {
             'id': '1',
@@ -141,18 +150,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.create_client(**params)
             self.assertEqual(result['id'], success['CustomerKey'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.create_client(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_delete_client(self, sign_mock):
         params = {
             'id': '1',
@@ -171,18 +179,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.delete_client(**params)
             self.assertEqual(result['id'], success['CustomerKey'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.delete_client(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_get_client(self, sign_mock):
         params = {
             'id': '1',
@@ -201,18 +208,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.get_client(**params)
             self.assertEqual(result['id'], success['CustomerKey'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.get_client(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_create_card(self, sign_mock):
         params = {
             'client_id': '1',
@@ -237,19 +243,18 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success, success_status, success_header)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success, success_status, success_header)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.create_card(**params)
             self.assertEqual(result['request_id'], success['RequestKey'])
             self.assertEqual(result['url'], success_header['Location'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.create_card(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_delete_card(self, sign_mock):
         params = {
             'id': 1,
@@ -271,18 +276,17 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.delete_card(**params)
             self.assertEqual(result['id'], success['CardId'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.delete_card(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_get_cards(self, sign_mock):
         params = {
             'client_id': '1',
@@ -311,8 +315,8 @@ class TinkoffTestCase(TestCase):
             'Details': 'There is an error here',
         }
 
-        response = self._get_mock_response(success)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(success)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             items = self.tinkoff.get_cards(**params)
             self.assertEqual(len(items), len(success))
             for i in range(len(items)):
@@ -320,13 +324,12 @@ class TinkoffTestCase(TestCase):
                 self.assertEqual(items[i]['pan'], success[i]['Pan'])
                 self.assertEqual(items[i]['status'], success[i]['Status'])
 
-        response = self._get_mock_response(fail)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(fail)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(TinkoffError) as error:
                 result = self.tinkoff.get_cards(**params)
                 self.assertEqual(error.code, fail['ErrorCode'])
 
-    @patch('tinkoff.Tinkoff._get_sign', return_value=SIGN_VALUE)
     def test_server_error(self, sign_mock):
         params = {
             'order_id': '1',
@@ -335,18 +338,18 @@ class TinkoffTestCase(TestCase):
             'data': {}
         }
 
-        response = self._get_mock_response(None, 500)
-        with patch('tinkoff.Tinkoff._proceed_request', return_value=response):
+        request_patch = self._get_request_patch(None, 500)
+        with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             with self.assertRaises(HTTPError):
                 result = self.tinkoff.create_payment(**params)
 
-    def _get_mock_response(self, json, status_code=200, headers=None):
-        def raise_for_status():
-            if status_code >= 400: raise HTTPError
-        response = MagicMock()
-        response.json = MagicMock(return_value=json)
-        response.status_code = status_code
-        if headers:
-            response.headers = headers
-        response.raise_for_status = MagicMock(side_effect=raise_for_status)
-        return response
+    def _get_request_patch(self, result, status=200, headers=None):
+        if headers is None:
+            headers = {}
+        def side_effect(*args, **kwargs):
+            if status >= 400:
+                raise HTTPError
+            return (result, status, headers)
+        return {
+            'side_effect': side_effect,
+        }

@@ -450,15 +450,14 @@ class Tinkoff():
         method, url, params = self._prepare_request(method, url, **kwargs)
 
         logger.debug('Request %s to URL %s with args: %s' % (method, url, str(kwargs)))
-        response = self._proceed_request(method, url, **params)
 
         try:
-            response.raise_for_status()
+            result, status, headers = self._proceed_request(method, url, **params)
         except Exception as e:
-            logger.exception('Failed with status %d' % (response.status_code,))
+            logger.exception('Request failed')
             raise e
 
-        return self._prepare_response(response)
+        return self._prepare_response(result, status, headers)
 
     def _prepare_request(self, method, url, **kwargs):
         kwargs.setdefault('data', {})
@@ -472,16 +471,17 @@ class Tinkoff():
         return method, url, kwargs
 
     def _proceed_request(self, method, url, **kwargs):
-        return requests.request(method, url, **kwargs)
+        response = requests.request(method, url, **kwargs)
+        response.raise_for_status()
+        return response.json(), response.status_code, response.headers
 
-    def _prepare_response(self, response):
-        result = response.json()
+    def _prepare_response(self, result, status, headers):
         logger.debug('Got response: %s', result)
 
         if isinstance(result, dict):
             if not result['Success']:
                 logger.warning('Failed with result: %s', result)
-                message = ' '.join([ x for x in [ result.get('Details'), result.get('Message') ] if x ])
+                message = ' '.join(x for x in (result.get('Details'), result.get('Message')) if x)
                 code = result.get('ErrorCode', '-1')
                 raise TinkoffError(message, code)
         elif isinstance(result, list):
@@ -489,8 +489,8 @@ class Tinkoff():
                 'items': result,
             }
 
-        if 300 <= response.status_code <= 399:
-            result['URL'] = response.headers['Location']
+        if 300 <= status <= 399:
+            result['URL'] = headers.get('Location')
 
         return result
 
