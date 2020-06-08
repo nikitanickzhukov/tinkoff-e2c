@@ -130,6 +130,7 @@ class CryptoProTestCase(TestCase):
             if returncode:
                 raise self.cryptopro._get_error(stderr)
             return stdout
+
         return {
             'side_effect': side_effect,
         }

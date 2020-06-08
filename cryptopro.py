@@ -3,8 +3,9 @@ import subprocess
 import tempfile
 import base64
 import re
-
 import logging
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +19,7 @@ class CryptoProError(Exception):
         return '{}: {}'.format(self.code, self.message)
 
 
-class CryptoPro():
+class CryptoPro:
     """
     A class for getting hashes, signatures and certificate numbers
     for secure connection client's system with Tinkoff bank's E2C
@@ -46,7 +47,7 @@ class CryptoPro():
         """
         Parameters
         ----------
-        container_name[str]: a name of container to use as an encryptor (like '\\\\.\\HDIMAGE\\xxx...')
+        container_name[str]: a name of container to use as an encryptor (like '\\\\.\\HDIMAGE\\xx-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
         store_name[str]: a name of store where certificate is located (like 'uMy')
         encryption_provider[int]: an encryption provider (like 75, 80, ...)
         sign_algorithm[str]: an algorithm to use when generating a hash or a signature (like 'GOST12_256', 'GOST12_512', ...)
@@ -322,15 +323,11 @@ class CryptoPro():
         })
 
         command = self.prefix + command
-        params = [ x % kwargs for x in args ]
+        params = [x % kwargs for x in args]
 
         logger.debug('Executing %s with args: %s', command, params)
 
-        try:
-            output = self._proceed_command(command, *params)
-        except CryptoProError as e:
-            logger.exception('Failed with code %d', e.code)
-            raise e
+        output = self._proceed_command(command, *params)
 
         return output
 

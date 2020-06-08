@@ -1,8 +1,7 @@
 import requests
-
-from cryptopro import CryptoPro, CryptoProError
-
 import logging
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +45,7 @@ class TinkoffError(Exception):
         return '{}: {}'.format(self.code, self.message)
 
 
-class Tinkoff():
+class Tinkoff:
     """
     A class for Tinkoff's E2C operations
 
@@ -82,7 +81,7 @@ class Tinkoff():
         Parameters
         ----------
         terminal_key[str]: the terminal key (got from bank)
-        cryptopro[dict]: cryptopro settings (see cryptopro.CryptoPro init parameters)
+        cryptopro[CryptoPro]: CryptoPro instance
         is_test[bool]: use test endpoint for requests
         """
 
@@ -107,15 +106,13 @@ class Tinkoff():
         Returns
         -------
         dict: payment data:
-            - id[int] - `PaymentId`
+            - payment_id[int] - `PaymentId`
             - status[str] - `Status`
             - status_name[str] - `Status` description
             - url[str] - `PaymentURL` or `Location` header when got a 3xx status
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
         TinkoffError: when got an error from the bank
         """
 
@@ -133,7 +130,7 @@ class Tinkoff():
 
         response = self._request('POST', 'Init', data=request)
         result = {
-            'id': response['PaymentId'],
+            'payment_id': response['PaymentId'],
             'status': response['Status'],
             'status_name': PAYMENT_STATUS_MAPPING.get(response['Status']),
         }
@@ -143,13 +140,13 @@ class Tinkoff():
             result['url'] = response['URL']
         return result
 
-    def proceed_payment(self, id):
+    def proceed_payment(self, payment_id):
         """
         Proceeds a payment
 
         Parameters
         ----------
-        id[int]: `PaymentId`
+        payment_id[int]: `PaymentId`
 
         Returns
         -------
@@ -166,22 +163,22 @@ class Tinkoff():
         """
 
         request = {
-            'PaymentId': id,
+            'PaymentId': payment_id,
         }
         response = self._request('POST', 'Payment', data=request)
         return {
-            'id': response['PaymentId'],
+            'payment_id': response['PaymentId'],
             'status': response['Status'],
             'status_name': PAYMENT_STATUS_MAPPING.get(response['Status']),
         }
 
-    def get_payment(self, id):
+    def get_payment(self, payment_id):
         """
         Returns a payment info
 
         Parameters
         ----------
-        id[int]: `PaymentId`
+        payment_id[int]: `PaymentId`
 
         Returns
         -------
@@ -192,45 +189,41 @@ class Tinkoff():
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
-            'PaymentId': id,
+            'PaymentId': payment_id,
         }
         response = self._request('POST', 'GetState', data=request)
         return {
-            'id': response['PaymentId'],
+            'payment_id': response['PaymentId'],
             'status': response['Status'],
             'status_name': PAYMENT_STATUS_MAPPING.get(response['Status']),
         }
 
-    def create_client(self, id, email=None, phone=None):
+    def create_client(self, client_id, email=None, phone=None):
         """
         Creates a client
 
         Parameters
         ----------
-        id[str]: `CustomerKey`
+        client_id[str]: `CustomerKey`
         email[str]: `Email`
         phone[str]: `Phone`
 
         Returns
         -------
         dict: client info:
-            - id[str] - `CustomerKey`
+            - client_id[str] - `CustomerKey`
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
-            'CustomerKey': id,
+            'CustomerKey': client_id,
         }
         if email is not None:
             request['Email'] = email
@@ -238,65 +231,61 @@ class Tinkoff():
             request['Phone'] = phone
         response = self._request('POST', 'AddCustomer', data=request)
         return {
-            'id': response['CustomerKey'],
+            'client_id': response['CustomerKey'],
         }
 
-    def delete_client(self, id):
+    def delete_client(self, client_id):
         """
         Deletes a client
 
         Parameters
         ----------
-        id[str]: `CustomerKey`
+        client_id[str]: `CustomerKey`
 
         Returns
         -------
         dict: client info:
-            - id[str] - `CustomerKey`
+            - client_id[str] - `CustomerKey`
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
-            'CustomerKey': id,
+            'CustomerKey': client_id,
         }
         response = self._request('POST', 'RemoveCustomer', data=request)
         return {
-            'id': response['CustomerKey'],
+            'client_id': response['CustomerKey'],
         }
 
-    def get_client(self, id):
+    def get_client(self, client_id):
         """
         Returns a client info
 
         Parameters
         ----------
-        id[str]: `CustomerKey`
+        client_id[str]: `CustomerKey`
 
         Returns
         -------
         dict: client info:
-            - id[str] - `CustomerKey`
+            - client_id[str] - `CustomerKey`
             - email[str] - `Email`
             - phone[str] - `Phone`
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
-            'CustomerKey': id,
+            'CustomerKey': client_id,
         }
         response = self._request('POST', 'GetCustomer', data=request)
         result = {
-            'id': response['CustomerKey'],
+            'client_id': response['CustomerKey'],
         }
         if 'Email' in response:
             result['email'] = response['Email']
@@ -323,9 +312,7 @@ class Tinkoff():
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         # ERROR: There is a signature error if comment and/or form_type are passed
@@ -349,36 +336,34 @@ class Tinkoff():
             result['url'] = response['URL']
         return result
 
-    def delete_card(self, id, client_id):
+    def delete_card(self, card_id, client_id):
         """
         Updates card status to `D` (deleted)
 
         Parameters
         ----------
-        id[int]: `CardId`
+        card_id[int]: `CardId`
         client_id[str]: `CustomerKey`
 
         Returns
         -------
         dict: card info:
-            - id[int] - `CardId`
+            - card_id[int] - `CardId`
             - status[str] - `Status`
             - status_name[str] - `Status` description
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
-            'CardId': id,
+            'CardId': card_id,
             'CustomerKey': client_id,
         }
         response = self._request('POST', 'RemoveCard', data=request)
         return {
-            'id': response['CardId'],
+            'card_id': response['CardId'],
             'status': response['Status'],
             'status_name': CARD_STATUS_MAPPING.get(response['Status']),
         }
@@ -394,7 +379,7 @@ class Tinkoff():
         Returns
         -------
         list[dict]: cards:
-            - id[int] - `CardId`
+            - card_id[int] - `CardId`
             - status[str] - `Status`
             - status_name[str] - `Status` description
             - type[int] -  `CardType`,
@@ -406,17 +391,15 @@ class Tinkoff():
 
         Raises
         ------
-        CryptoProError: when got an encryption error
-        HTTPError: when got a request error
-        TinkoffError: when got an error from the bank
+        TinkoffError: when got an error
         """
 
         request = {
             'CustomerKey': client_id,
         }
         response = self._request('POST', 'GetCardList', data=request)
-        return [ {
-            'id': x['CardId'],
+        return [{
+            'card_id': x['CardId'],
             'type': x['CardType'],
             'type_name': CARD_TYPE_MAPPING.get(x['CardType']),
             'pan': x['Pan'],
@@ -425,7 +408,7 @@ class Tinkoff():
             'rebill_id': x.get('RebillID'),
             'expires': x.get('ExpDate'),
             'is_active': (x['Status'] == 'A'),
-        } for x in response['items'] ]
+        } for x in response['items']]
 
     def get_card_check_types(self):
         """
@@ -438,13 +421,13 @@ class Tinkoff():
             - name[str] - description
         """
 
-        return [ { 'code': x[0], 'name': x[1] } for x in CARD_CHECK_TYPES ]
+        return [{'code': x[0], 'name': x[1]} for x in CARD_CHECK_TYPES]
 
     def _process_amount(self, value):
         return int(value * 100)
 
     def _join_data(self, data):
-        return '|'.join([ '%s=%s' % (x, data[x]) for x in data ])
+        return '|'.join(['%s=%s' % (x, data[x]) for x in data])
 
     def _request(self, method, url, **kwargs):
         method, url, params = self._prepare_request(method, url, **kwargs)
@@ -454,8 +437,7 @@ class Tinkoff():
         try:
             result, status, headers = self._proceed_request(method, url, **params)
         except Exception as e:
-            logger.exception('Request failed')
-            raise e
+            raise TinkoffError('Request is failed') from e
 
         return self._prepare_response(result, status, headers)
 
@@ -497,33 +479,30 @@ class Tinkoff():
     def _get_sign(self, data):
         logger.debug('Sign data: %s', data)
 
-        content = ''.join([ str(data[x]) for x in sorted(data.keys()) ])
+        content = ''.join([str(data[x]) for x in sorted(data.keys())])
 
         logger.debug('Sign string: %s', content)
 
         try:
-            digest = self.cp.get_hash(content)
-            digest_b64 = self.cp.to_base64(digest)
-        except CryptoProError as e:
-            logger.exception('Cannot generate digest: error %d', e.code)
-            raise e
+            digest = self.cryptopro.get_hash(content)
+            digest_b64 = self.cryptopro.to_base64(digest)
+        except Exception as e:
+            raise TinkoffError('Cannot generate digest') from e
 
         logger.debug('Hash: %s', digest_b64)
 
         try:
-            sign = self.cp.get_sign(digest)
-            sign_b64 = self.cp.to_base64(sign)
-        except CryptoProError as e:
-            logger.exception('Cannot generate signature: error %d', e.code)
-            raise e
+            sign = self.cryptopro.get_sign(digest)
+            sign_b64 = self.cryptopro.to_base64(sign)
+        except Exception as e:
+            raise TinkoffError('Cannot generate signature') from e
 
         logger.debug('Sign: %s' % (sign_b64,))
 
         try:
-            serial = self.cp.get_certificate_serial()
-        except CryptoProError as e:
-            logger.exception('Cannot get certificate serial: error %d', e.code)
-            raise e
+            serial = self.cryptopro.get_certificate_serial()
+        except Exception as e:
+            raise TinkoffError('Cannot get certificate serial') from e
 
         logger.debug('Serial: %s', serial)
 
@@ -536,12 +515,6 @@ class Tinkoff():
     @property
     def url(self):
         return self.test_url if self.is_test else self.prod_url
-
-    @property
-    def cp(self):
-        if not hasattr(self, '__cp'):
-            setattr(self, '__cp', CryptoPro(**self.cryptopro))
-        return getattr(self, '__cp')
 
 
 __all__ = ('Tinkoff', 'TinkoffError')

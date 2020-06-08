@@ -1,14 +1,17 @@
 from unittest import TestCase
 from unittest.mock import patch
-from requests.exceptions import HTTPError
 
 from tinkoff import Tinkoff, TinkoffError
-from .test_cryptopro import CRYPTOPRO
+from cryptopro import CryptoPro
 
 
+CRYPTOPRO = {
+    'container_name': '\\\\.\\HDIMAGE\\xx-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    'store_name': 'uMy',
+}
 TINKOFF = {
     'terminal_key': 'test_key',
-    'cryptopro': CRYPTOPRO,
+    'cryptopro': CryptoPro(**CRYPTOPRO),
     'is_test': True,
 }
 SIGN_VALUE = {
@@ -62,7 +65,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.create_payment(**params)
-            self.assertEqual(result['id'], success['PaymentId'])
+            self.assertEqual(result['payment_id'], success['PaymentId'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -72,13 +75,13 @@ class TinkoffTestCase(TestCase):
 
     def test_proceed_payment(self, sign_mock):
         params = {
-            'id': '1',
+            'payment_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'PaymentId': params['id'],
+            'PaymentId': params['payment_id'],
             'Status': 'COMPLETED',
         }
         fail = {
@@ -92,7 +95,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.proceed_payment(**params)
-            self.assertEqual(result['id'], success['PaymentId'])
+            self.assertEqual(result['payment_id'], success['PaymentId'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -102,13 +105,13 @@ class TinkoffTestCase(TestCase):
 
     def test_get_payment(self, sign_mock):
         params = {
-            'id': '1',
+            'payment_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'PaymentId': params['id'],
+            'PaymentId': params['payment_id'],
             'OrderId': '1',
             'Status': 'COMPLETED',
         }
@@ -123,7 +126,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.get_payment(**params)
-            self.assertEqual(result['id'], success['PaymentId'])
+            self.assertEqual(result['payment_id'], success['PaymentId'])
             self.assertEqual(result['status'], success['Status'])
 
         request_patch = self._get_request_patch(fail)
@@ -134,13 +137,13 @@ class TinkoffTestCase(TestCase):
 
     def test_create_client(self, sign_mock):
         params = {
-            'id': '1',
+            'client_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'CustomerKey': params['id'],
+            'CustomerKey': params['client_id'],
         }
         fail = {
             'TerminalKey': self.tinkoff.terminal_key,
@@ -153,7 +156,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.create_client(**params)
-            self.assertEqual(result['id'], success['CustomerKey'])
+            self.assertEqual(result['client_id'], success['CustomerKey'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -163,13 +166,13 @@ class TinkoffTestCase(TestCase):
 
     def test_delete_client(self, sign_mock):
         params = {
-            'id': '1',
+            'client_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'CustomerKey': params['id'],
+            'CustomerKey': params['client_id'],
         }
         fail = {
             'TerminalKey': self.tinkoff.terminal_key,
@@ -182,7 +185,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.delete_client(**params)
-            self.assertEqual(result['id'], success['CustomerKey'])
+            self.assertEqual(result['client_id'], success['CustomerKey'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -192,13 +195,13 @@ class TinkoffTestCase(TestCase):
 
     def test_get_client(self, sign_mock):
         params = {
-            'id': '1',
+            'client_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'CustomerKey': params['id'],
+            'CustomerKey': params['client_id'],
         }
         fail = {
             'TerminalKey': self.tinkoff.terminal_key,
@@ -211,7 +214,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.get_client(**params)
-            self.assertEqual(result['id'], success['CustomerKey'])
+            self.assertEqual(result['client_id'], success['CustomerKey'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -257,14 +260,14 @@ class TinkoffTestCase(TestCase):
 
     def test_delete_card(self, sign_mock):
         params = {
-            'id': 1,
+            'card_id': 1,
             'client_id': '1',
         }
         success = {
             'TerminalKey': self.tinkoff.terminal_key,
             'Success': True,
             'ErrorCode': '0',
-            'CardId': params['id'],
+            'CardId': params['card_id'],
             'CustomerKey': params['client_id'],
             'Status': 'D',
         }
@@ -279,7 +282,7 @@ class TinkoffTestCase(TestCase):
         request_patch = self._get_request_patch(success)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
             result = self.tinkoff.delete_card(**params)
-            self.assertEqual(result['id'], success['CardId'])
+            self.assertEqual(result['card_id'], success['CardId'])
 
         request_patch = self._get_request_patch(fail)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
@@ -320,7 +323,7 @@ class TinkoffTestCase(TestCase):
             items = self.tinkoff.get_cards(**params)
             self.assertEqual(len(items), len(success))
             for i in range(len(items)):
-                self.assertEqual(items[i]['id'], success[i]['CardId'])
+                self.assertEqual(items[i]['card_id'], success[i]['CardId'])
                 self.assertEqual(items[i]['pan'], success[i]['Pan'])
                 self.assertEqual(items[i]['status'], success[i]['Status'])
 
@@ -340,16 +343,18 @@ class TinkoffTestCase(TestCase):
 
         request_patch = self._get_request_patch(None, 500)
         with patch('tinkoff.Tinkoff._proceed_request', **request_patch):
-            with self.assertRaises(HTTPError):
+            with self.assertRaises(TinkoffError):
                 result = self.tinkoff.create_payment(**params)
 
     def _get_request_patch(self, result, status=200, headers=None):
         if headers is None:
             headers = {}
+
         def side_effect(*args, **kwargs):
             if status >= 400:
-                raise HTTPError
-            return (result, status, headers)
+                raise Exception('Fake error')
+            return result, status, headers
+
         return {
             'side_effect': side_effect,
         }
